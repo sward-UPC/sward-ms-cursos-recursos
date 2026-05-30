@@ -1,0 +1,17 @@
+from abc import ABC, abstractmethod
+from uuid import UUID
+from src.domain.entities.actividad import Actividad
+from src.domain.entities.curso import Curso
+
+
+class CursoRepositoryPort(ABC):
+    @abstractmethod
+    async def find_by_id(self, id: UUID) -> Curso | None: ...
+    @abstractmethod
+    async def save(self, curso: Curso) -> Curso: ...
+    @abstractmethod
+    async def find_all(self) -> list[Curso]: ...
+    @abstractmethod
+    async def save_actividad(self, actividad: Actividad) -> Actividad: ...
+    @abstractmethod
+    async def find_actividades(self, curso_id: UUID) -> list[Actividad]: ...
