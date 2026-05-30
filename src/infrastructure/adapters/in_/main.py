@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from scalar_fastapi import get_scalar_api_reference
 from src.infrastructure.adapters.in_.cursos_router import router as cursos_router
 from src.infrastructure.adapters.in_.recursos_router import router as recursos_router
 from src.infrastructure.adapters.in_.recursos_router import (
@@ -23,7 +24,23 @@ async def lifespan(app: FastAPI):
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="SWARD — Cursos y Recursos", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="SWARD — Microservicio de Cursos y Recursos",
+    version="0.1.0",
+    description=(
+        "Gestiona el catálogo de cursos y sus recursos educativos asociados, "
+        "exponiendo APIs de consulta y administración para la plataforma SWARD."
+    ),
+    lifespan=lifespan,
+    openapi_tags=[
+        {"name": "Cursos", "description": "Creación, consulta y gestión de cursos."},
+        {
+            "name": "Recursos",
+            "description": "Gestión de los recursos educativos asociados a los cursos.",
+        },
+        {"name": "Health", "description": "Sonda de estado del servicio."},
+    ],
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
@@ -60,6 +77,13 @@ app.include_router(recursos_router)
 app.include_router(recursos_service_router)
 
 
-@app.get("/health")
+@app.get("/scalar", include_in_schema=False)
+async def scalar_docs():
+    """Renderiza la referencia de API interactiva (Scalar) del servicio."""
+    return get_scalar_api_reference(openapi_url=app.openapi_url, title=app.title)
+
+
+@app.get("/health", tags=["Health"], summary="Estado del servicio")
 async def health():
+    """Devuelve el estado de salud del microservicio para sondas de liveness/readiness."""
     return {"status": "ok", "service": settings.service_name}
