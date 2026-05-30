@@ -1,4 +1,7 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEFAULT_SECRET_KEY = "dev-secret-change-in-production"
 
 
 class Settings(BaseSettings):
@@ -12,6 +15,26 @@ class Settings(BaseSettings):
     lms_service_url: str = "http://localhost:8002"
     environment: str = "development"
     service_name: str = "sward-ms-cursos-recursos"
+
+    # Autenticación JWT (token emitido por sward-ms-usuarios, HS256).
+    secret_key: str = DEFAULT_SECRET_KEY
+    jwt_algorithm: str = "HS256"
+    # Clave propia que este servicio envía como X-Service-Key en llamadas salientes.
+    service_key: str = ""
+    # Claves de servicio entrantes autorizadas, separadas por coma.
+    authorized_service_keys: str = ""
+
+    @property
+    def authorized_service_keys_set(self) -> set[str]:
+        return {k.strip() for k in self.authorized_service_keys.split(",") if k.strip()}
+
+    @model_validator(mode="after")
+    def _validar_secreto_en_produccion(self) -> "Settings":
+        if self.environment != "development" and self.secret_key == DEFAULT_SECRET_KEY:
+            raise ValueError(
+                "SECRET_KEY no puede ser el valor por defecto fuera de desarrollo."
+            )
+        return self
 
 
 settings = Settings()

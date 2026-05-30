@@ -30,7 +30,15 @@ from src.infrastructure.dependencies import (
     get_buscar_candidatos_uc,
     get_gestionar_curso_uc,
     get_gestionar_recurso_uc,
+    require_jwt,
 )
+
+FAKE_PAYLOAD = {
+    "sub": "00000000-0000-0000-0000-000000000001",
+    "rol": "docente",
+    "permisos": ["leer", "escribir"],
+    "type": "access",
+}
 
 
 class FakeCursoRepo(CursoRepositoryPort):
@@ -120,7 +128,19 @@ async def client():
     app.dependency_overrides[get_buscar_candidatos_uc] = lambda: (
         BuscarRecursosCandidatosUseCase(recurso_repo)
     )
+    # Sobreescribe la validación JWT por un payload fake (autenticación simulada).
+    app.dependency_overrides[require_jwt] = lambda: FAKE_PAYLOAD
 
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def anon_client():
+    """Cliente sin override de auth: los endpoints protegidos exigen token real."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

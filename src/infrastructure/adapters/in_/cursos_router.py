@@ -7,9 +7,12 @@ from src.application.use_cases.gestionar_curso import (
     GestionarCursoCommand,
     GestionarCursoUseCase,
 )
-from src.infrastructure.dependencies import get_gestionar_curso_uc
+from src.infrastructure.dependencies import get_gestionar_curso_uc, require_jwt
 
-router = APIRouter(prefix="/courses", tags=["Cursos"])
+# Todos los endpoints de /courses exigen un JWT de acceso válido.
+router = APIRouter(
+    prefix="/courses", tags=["Cursos"], dependencies=[Depends(require_jwt)]
+)
 
 
 class CreateCourseRequest(BaseModel):
