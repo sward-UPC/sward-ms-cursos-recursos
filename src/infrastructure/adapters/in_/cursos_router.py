@@ -1,13 +1,13 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.application.use_cases.gestionar_curso import (
     GestionarCursoCommand,
     GestionarCursoUseCase,
 )
-from src.infrastructure.adapters.out_.curso_postgres_adapter import CursoPostgresAdapter
-from src.infrastructure.db.database import get_session
+from src.infrastructure.dependencies import get_gestionar_curso_uc
 
 router = APIRouter(prefix="/courses", tags=["Cursos"])
 
@@ -19,18 +19,17 @@ class CreateCourseRequest(BaseModel):
     moodle_course_id: str = ""
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_course(
-    body: CreateCourseRequest, session: AsyncSession = Depends(get_session)
+    body: CreateCourseRequest,
+    uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc),
 ):
-    uc = GestionarCursoUseCase(CursoPostgresAdapter(session))
     c = await uc.crear(GestionarCursoCommand(**body.model_dump()))
     return {"id": str(c.id), "nombre": c.nombre, "codigo": c.codigo}
 
 
 @router.get("")
-async def list_courses(session: AsyncSession = Depends(get_session)):
-    uc = GestionarCursoUseCase(CursoPostgresAdapter(session))
+async def list_courses(uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc)):
     cursos = await uc.listar()
     return [
         {"id": str(c.id), "nombre": c.nombre, "codigo": c.codigo, "estado": c.estado}
@@ -39,9 +38,13 @@ async def list_courses(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/{course_id}")
-async def get_course(course_id: UUID, session: AsyncSession = Depends(get_session)):
-    uc = GestionarCursoUseCase(CursoPostgresAdapter(session))
+async def get_course(
+    course_id: UUID,
+    uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc),
+):
     c = await uc.obtener(course_id)
     if not c:
-        raise HTTPException(404, "Curso no encontrado")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Curso no encontrado"
+        )
     return {"id": str(c.id), "nombre": c.nombre, "codigo": c.codigo}
