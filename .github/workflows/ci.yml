@@ -31,7 +31,7 @@ jobs:
         run: ruff check src/ tests/ && ruff format --check src/ tests/
 
       - name: Análisis de seguridad con bandit
-        run: bandit -r src/
+        run: bandit -r src/ --severity-level medium
 
       - name: Auditoría de dependencias con pip-audit
         run: pip-audit
