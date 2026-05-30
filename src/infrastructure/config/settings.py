@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     lms_service_url: str = "http://localhost:8002"
     environment: str = "development"
     service_name: str = "sward-ms-cursos-recursos"
+    # Orígenes permitidos para CORS (configurables por entorno).
+    cors_allowed_origins: list[str] = ["http://localhost:5173"]
+
+    @property
+    def is_development(self) -> bool:
+        return self.environment == "development"
 
     # Autenticación JWT (token emitido por sward-ms-usuarios, HS256).
     secret_key: str = DEFAULT_SECRET_KEY

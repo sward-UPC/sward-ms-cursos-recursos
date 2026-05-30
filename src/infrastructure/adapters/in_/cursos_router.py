@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.application.use_cases.gestionar_curso import (
     GestionarCursoCommand,
@@ -16,10 +16,12 @@ router = APIRouter(
 
 
 class CreateCourseRequest(BaseModel):
-    nombre: str
-    codigo: str
-    descripcion: str = ""
-    moodle_course_id: str = ""
+    model_config = ConfigDict(extra="forbid")
+
+    nombre: str = Field(max_length=255)
+    codigo: str = Field(max_length=64)
+    descripcion: str = Field(default="", max_length=2000)
+    moodle_course_id: str = Field(default="", max_length=64)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

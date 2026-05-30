@@ -1,7 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.application.use_cases.buscar_recursos_candidatos import (
     BuscarRecursosCandidatosUseCase,
@@ -32,15 +32,17 @@ service_router = APIRouter(
 
 
 class CreateResourceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     curso_id: UUID
-    titulo: str
+    titulo: str = Field(max_length=255)
     tipo: TipoRecurso
     nivel_dificultad: NivelDificultad = NivelDificultad.INTERMEDIO
-    url: str = ""
-    etiquetas: list[str] = []
-    competencia: str = ""
-    tiempo_estimado_min: int = 0
-    concepto_ids: list[str] = []
+    url: str = Field(default="", max_length=2048)
+    etiquetas: list[str] = Field(default_factory=list, max_length=50)
+    competencia: str = Field(default="", max_length=255)
+    tiempo_estimado_min: int = Field(default=0, ge=0, le=100000)
+    concepto_ids: list[str] = Field(default_factory=list, max_length=200)
 
 
 @router.post("", status_code=201)
@@ -74,7 +76,7 @@ async def get_candidates(
     courseId: UUID | None = None,
     tipo: TipoRecurso | None = None,
     nivel: NivelDificultad | None = None,
-    limit: int = 10,
+    limit: int = Query(default=10, ge=1, le=100),
     uc: BuscarRecursosCandidatosUseCase = Depends(get_buscar_candidatos_uc),
 ):
     recursos = await uc.execute(
