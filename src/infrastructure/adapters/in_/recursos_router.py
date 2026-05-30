@@ -15,9 +15,20 @@ from src.domain.value_objects.tipo_recurso import NivelDificultad, TipoRecurso
 from src.infrastructure.dependencies import (
     get_buscar_candidatos_uc,
     get_gestionar_recurso_uc,
+    require_jwt,
+    require_service_key,
 )
 
-router = APIRouter(prefix="/resources", tags=["Recursos"])
+# Endpoints de gestión de recursos: exigen un JWT de acceso válido (usuario final).
+router = APIRouter(
+    prefix="/resources", tags=["Recursos"], dependencies=[Depends(require_jwt)]
+)
+
+# Endpoint servicio-a-servicio (consumido por recomendacion): se valida vía
+# X-Service-Key en lugar de JWT. En desarrollo, sin claves configuradas, no bloquea.
+service_router = APIRouter(
+    prefix="/resources", tags=["Recursos"], dependencies=[Depends(require_service_key)]
+)
 
 
 class CreateResourceRequest(BaseModel):
@@ -58,7 +69,7 @@ async def list_resources(
     ]
 
 
-@router.get("/candidates")
+@service_router.get("/candidates")
 async def get_candidates(
     courseId: UUID | None = None,
     tipo: TipoRecurso | None = None,

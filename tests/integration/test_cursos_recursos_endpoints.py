@@ -18,6 +18,12 @@ async def test_health_ok(client):
 
 
 @pytest.mark.asyncio
+async def test_endpoint_protegido_sin_token_retorna_401(anon_client):
+    resp = await anon_client.get(COURSES)
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_crear_curso_devuelve_201(client):
     resp = await client.post(COURSES, json={"nombre": "Cálculo I", "codigo": "MA101"})
     assert resp.status_code == 201
