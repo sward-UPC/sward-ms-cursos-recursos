@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.application.use_cases.gestionar_curso import (
@@ -209,7 +209,7 @@ async def list_courses(uc: GestionarCursoUseCase = Depends(get_gestionar_curso_u
     },
 )
 async def get_course(
-    course_id: UUID = Field(..., description="UUID del curso a obtener"),
+    course_id: UUID = Path(..., description="UUID del curso a obtener"),
     uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc),
 ):
     """Obtiene los detalles de un curso específico por ID.
