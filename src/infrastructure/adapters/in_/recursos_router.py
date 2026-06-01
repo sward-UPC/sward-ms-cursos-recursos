@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, Path, Query, status
+from fastapi import APIRouter, Body, Depends, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.application.use_cases.buscar_recursos_candidatos import (
