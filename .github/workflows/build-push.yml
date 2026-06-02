@@ -10,5 +10,8 @@ jobs:
     uses: sward-UPC/.github/.github/workflows/build-push-ghcr.yml@main
     with:
       image_name: sward-ms-cursos-recursos
+      service_type: microservice
+      aws_service_name: sward-ms-cursos-recursos
+      aws_cluster_name: sward-cluster
       needs_shared: true
     secrets: inherit
