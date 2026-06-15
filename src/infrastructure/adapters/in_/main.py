@@ -37,6 +37,7 @@ async def lifespan(app: FastAPI):
     yield
     await engine.dispose()
 
+
 app = FastAPI(
     title="SWARD — Microservicio de Cursos y Recursos",
     version="0.1.0",
