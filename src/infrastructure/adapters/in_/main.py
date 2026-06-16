@@ -41,6 +41,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SWARD — Microservicio de Cursos y Recursos",
     version="0.1.0",
+    openapi_url="/courses/openapi.json",
     description=(
         "Gestiona el catálogo de cursos y sus recursos educativos asociados, "
         "exponiendo APIs de consulta y administración para la plataforma SWARD."
