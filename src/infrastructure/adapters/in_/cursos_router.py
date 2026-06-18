@@ -84,7 +84,7 @@ class CursoResponse(BaseModel):
 
 
 class CursoDetailResponse(BaseModel):
-    """Respuesta detallada que contiene información completa de un curso."""
+    """Respuesta completa de un curso individual."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -93,6 +93,10 @@ class CursoDetailResponse(BaseModel):
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "nombre": "Algoritmos y Estructuras de Datos",
                 "codigo": "CS-2025-001",
+                "descripcion": "Curso fundamental sobre algoritmos.",
+                "moodle_course_id": "5",
+                "estado": "activo",
+                "docente_id": None,
             }
         },
     )
@@ -105,6 +109,14 @@ class CursoDetailResponse(BaseModel):
         description="Nombre del curso", example="Algoritmos y Estructuras de Datos"
     )
     codigo: str = Field(description="Código del curso", example="CS-2025-001")
+    descripcion: str = Field(description="Descripción del curso", default="")
+    moodle_course_id: str = Field(description="ID del curso en Moodle", default="")
+    estado: str = Field(
+        description="Estado del curso (activo, inactivo)", example="activo"
+    )
+    docente_id: str | None = Field(
+        description="UUID del docente responsable", default=None
+    )
 
 
 @router.post(
@@ -142,7 +154,15 @@ async def create_course(
     **SLA:** <100ms | **Auth:** JWT | **Rate Limit:** 60 req/min
     """
     c = await uc.crear(GestionarCursoCommand(**body.model_dump()))
-    return {"id": str(c.id), "nombre": c.nombre, "codigo": c.codigo}
+    return {
+        "id": str(c.id),
+        "nombre": c.nombre,
+        "codigo": c.codigo,
+        "descripcion": c.descripcion,
+        "moodle_course_id": c.moodle_course_id,
+        "estado": c.estado if isinstance(c.estado, str) else c.estado.value,
+        "docente_id": str(c.docente_id) if c.docente_id else None,
+    }
 
 
 @router.get(
@@ -228,4 +248,12 @@ async def get_course(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Curso no encontrado"
         )
-    return {"id": str(c.id), "nombre": c.nombre, "codigo": c.codigo}
+    return {
+        "id": str(c.id),
+        "nombre": c.nombre,
+        "codigo": c.codigo,
+        "descripcion": c.descripcion,
+        "moodle_course_id": c.moodle_course_id,
+        "estado": c.estado if isinstance(c.estado, str) else c.estado.value,
+        "docente_id": str(c.docente_id) if c.docente_id else None,
+    }
