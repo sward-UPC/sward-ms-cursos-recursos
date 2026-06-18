@@ -41,6 +41,12 @@ def get_gestionar_curso_uc(
     return GestionarCursoUseCase(CursoPostgresAdapter(session))
 
 
+def get_curso_repo(
+    session: AsyncSession = Depends(get_session),
+) -> CursoPostgresAdapter:
+    return CursoPostgresAdapter(session)
+
+
 def get_gestionar_recurso_uc(
     session: AsyncSession = Depends(get_session),
     s3: S3Adapter = Depends(get_s3_adapter),
