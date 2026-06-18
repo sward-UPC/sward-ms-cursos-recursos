@@ -64,25 +64,22 @@ class CursoResponse(BaseModel):
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "nombre": "Algoritmos y Estructuras de Datos",
                 "codigo": "CS-2025-001",
+                "descripcion": "Curso fundamental sobre algoritmos.",
+                "moodle_course_id": "5",
                 "estado": "activo",
+                "docente_id": None,
             }
         },
     )
 
-    id: str = Field(
-        description="UUID único del curso",
-        example="550e8400-e29b-41d4-a716-446655440000",
-    )
-    nombre: str = Field(
-        description="Nombre del curso",
-        max_length=255,
-        example="Algoritmos y Estructuras de Datos",
-    )
-    codigo: str = Field(
-        description="Código del curso", max_length=64, example="CS-2025-001"
-    )
-    estado: str = Field(
-        description="Estado del curso (activo, archivado, etc.)", example="activo"
+    id: str = Field(description="UUID único del curso")
+    nombre: str = Field(description="Nombre del curso", max_length=255)
+    codigo: str = Field(description="Código del curso", max_length=64)
+    descripcion: str = Field(description="Descripción del curso", default="")
+    moodle_course_id: str = Field(description="ID del curso en Moodle", default="")
+    estado: str = Field(description="Estado del curso (activo, inactivo)")
+    docente_id: str | None = Field(
+        description="UUID del docente responsable", default=None
     )
 
 
@@ -181,7 +178,15 @@ async def list_courses(uc: GestionarCursoUseCase = Depends(get_gestionar_curso_u
     """
     cursos = await uc.listar()
     return [
-        {"id": str(c.id), "nombre": c.nombre, "codigo": c.codigo, "estado": c.estado}
+        {
+            "id": str(c.id),
+            "nombre": c.nombre,
+            "codigo": c.codigo,
+            "descripcion": c.descripcion,
+            "moodle_course_id": c.moodle_course_id,
+            "estado": c.estado if isinstance(c.estado, str) else c.estado.value,
+            "docente_id": str(c.docente_id) if c.docente_id else None,
+        }
         for c in cursos
     ]
 
