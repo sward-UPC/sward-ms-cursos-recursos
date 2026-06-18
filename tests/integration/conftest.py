@@ -56,6 +56,14 @@ class FakeCursoRepo(CursoRepositoryPort):
     async def find_all(self) -> list[Curso]:
         return list(self.cursos.values())
 
+    async def upsert_by_moodle_id(self, curso: Curso) -> tuple[Curso, bool]:
+        for existente in self.cursos.values():
+            if existente.moodle_course_id == curso.moodle_course_id:
+                existente.nombre = curso.nombre
+                return existente, False
+        self.cursos[curso.id] = curso
+        return curso, True
+
     async def save_actividad(self, actividad: Actividad) -> Actividad:
         self.actividades.append(actividad)
         return actividad
