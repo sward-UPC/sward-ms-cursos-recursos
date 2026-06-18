@@ -42,6 +42,37 @@ class CursoPostgresAdapter(CursoRepositoryPort):
         r = await self._s.execute(select(CursoModel))
         return [_curso_to_entity(m) for m in r.scalars().all()]
 
+    async def upsert_by_moodle_id(self, curso: Curso) -> tuple[Curso, bool]:
+        """Inserta o actualiza un curso identificándolo por moodle_course_id.
+
+        Idempotente: el sync de Moodle puede correr muchas veces. Devuelve
+        (curso, creado) donde ``creado`` es True si fue alta nueva.
+        """
+        r = await self._s.execute(
+            select(CursoModel).where(
+                CursoModel.moodle_course_id == curso.moodle_course_id
+            )
+        )
+        m = r.scalar_one_or_none()
+        creado = m is None
+        if m:
+            m.nombre = curso.nombre
+            if curso.codigo:
+                m.codigo = curso.codigo
+        else:
+            m = CursoModel(
+                id=curso.id,
+                nombre=curso.nombre,
+                codigo=curso.codigo,
+                descripcion=curso.descripcion,
+                moodle_course_id=curso.moodle_course_id,
+                estado=curso.estado.value,
+                docente_id=curso.docente_id,
+            )
+            self._s.add(m)
+        await self._s.flush()
+        return _curso_to_entity(m), creado
+
     async def save_actividad(self, actividad: Actividad) -> Actividad:
         m = ActividadModel(
             id=actividad.id,
