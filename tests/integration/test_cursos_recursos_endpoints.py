@@ -8,6 +8,8 @@ HEALTH = "/health"
 COURSES = "/courses"
 RESOURCES = "/resources"
 CANDIDATES = "/resources/candidates"
+COURSES_SYNC = "/internal/courses/sync"
+RESOURCES_SYNC = "/internal/resources/sync"
 
 
 @pytest.mark.asyncio
@@ -98,3 +100,88 @@ async def test_candidates_filtra_por_tipo(client):
 async def test_get_course_inexistente_devuelve_404(client):
     resp = await client.get(f"{COURSES}/{uuid4()}")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_sync_recursos_crea_y_resuelve_curso(client):
+    # El curso debe existir para resolver el curso_id interno.
+    await client.post(
+        COURSES_SYNC,
+        json={"cursos": [{"moodle_course_id": "10", "nombre": "Algoritmos"}]},
+    )
+
+    resp = await client.post(
+        RESOURCES_SYNC,
+        json={
+            "recursos": [
+                {
+                    "moodle_activity_id": "10-act-1",
+                    "moodle_course_id": "10",
+                    "titulo": "Quiz de ordenamiento",
+                    "tipo": "quiz",
+                }
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body == {"procesados": 1, "creados": 1, "actualizados": 0, "omitidos": 0}
+
+    # El recurso queda asociado al curso resuelto y aparece en candidates.
+    listado = await client.get(RESOURCES)
+    recursos = listado.json()
+    assert len(recursos) == 1
+    assert recursos[0]["titulo"] == "Quiz de ordenamiento"
+    assert recursos[0]["tipo"] == "quiz"
+
+
+@pytest.mark.asyncio
+async def test_sync_recursos_es_idempotente(client):
+    await client.post(
+        COURSES_SYNC,
+        json={"cursos": [{"moodle_course_id": "10", "nombre": "Algoritmos"}]},
+    )
+    payload = {
+        "recursos": [
+            {
+                "moodle_activity_id": "10-act-1",
+                "moodle_course_id": "10",
+                "titulo": "Tarea 1",
+                "tipo": "assign",
+            }
+        ]
+    }
+    await client.post(RESOURCES_SYNC, json=payload)
+    resp = await client.post(RESOURCES_SYNC, json=payload)
+    assert resp.json() == {
+        "procesados": 1,
+        "creados": 0,
+        "actualizados": 1,
+        "omitidos": 0,
+    }
+    listado = await client.get(RESOURCES)
+    assert len(listado.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_sync_recursos_omite_curso_inexistente(client):
+    resp = await client.post(
+        RESOURCES_SYNC,
+        json={
+            "recursos": [
+                {
+                    "moodle_activity_id": "99-act-1",
+                    "moodle_course_id": "99",
+                    "titulo": "Huérfano",
+                    "tipo": "page",
+                }
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "procesados": 1,
+        "creados": 0,
+        "actualizados": 0,
+        "omitidos": 1,
+    }

@@ -59,3 +59,9 @@ def get_buscar_candidatos_uc(
     session: AsyncSession = Depends(get_session),
 ) -> BuscarRecursosCandidatosUseCase:
     return BuscarRecursosCandidatosUseCase(RecursoPostgresAdapter(session))
+
+
+def get_recurso_repo(
+    session: AsyncSession = Depends(get_session),
+) -> RecursoPostgresAdapter:
+    return RecursoPostgresAdapter(session)
