@@ -6,6 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from scalar_fastapi import get_scalar_api_reference
 from src.infrastructure.adapters.in_.cursos_router import router as cursos_router
+from src.infrastructure.adapters.in_.cursos_router import (
+    service_router as cursos_service_router,
+)
 from src.infrastructure.adapters.in_.recursos_router import router as recursos_router
 from src.infrastructure.adapters.in_.recursos_router import (
     service_router as recursos_service_router,
@@ -88,6 +91,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 
 app.include_router(cursos_router)
+app.include_router(cursos_service_router)
 app.include_router(recursos_router)
 app.include_router(recursos_service_router)
 
