@@ -46,6 +46,33 @@ async def test_flujo_crear_curso_luego_listar(client):
 
 
 @pytest.mark.asyncio
+async def test_editar_curso_descripcion_y_estado(client):
+    creado = (
+        await client.post(COURSES, json={"nombre": "Redes", "codigo": "RD101"})
+    ).json()
+
+    resp = await client.put(
+        f"{COURSES}/{creado['id']}",
+        json={"descripcion": "Curso de redes neuronales", "estado": "inactivo"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["descripcion"] == "Curso de redes neuronales"
+    assert body["estado"] == "inactivo"
+    # nombre/codigo no cambian
+    assert body["nombre"] == "Redes"
+    assert body["codigo"] == "RD101"
+
+
+@pytest.mark.asyncio
+async def test_editar_curso_inexistente_devuelve_404(client):
+    import uuid
+
+    resp = await client.put(f"{COURSES}/{uuid.uuid4()}", json={"estado": "inactivo"})
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_flujo_crear_recurso_luego_candidates(client):
     curso = await client.post(
         COURSES, json={"nombre": "Programación", "codigo": "CS100"}
