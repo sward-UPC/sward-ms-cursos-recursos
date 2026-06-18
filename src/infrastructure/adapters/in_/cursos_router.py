@@ -7,7 +7,14 @@ from src.application.use_cases.gestionar_curso import (
     GestionarCursoCommand,
     GestionarCursoUseCase,
 )
-from src.infrastructure.dependencies import get_gestionar_curso_uc, require_jwt
+from src.domain.entities.curso import Curso
+from src.infrastructure.adapters.out_.curso_postgres_adapter import CursoPostgresAdapter
+from src.infrastructure.dependencies import (
+    get_curso_repo,
+    get_gestionar_curso_uc,
+    require_jwt,
+    require_service_key,
+)
 
 # Todos los endpoints de /courses exigen un JWT de acceso válido.
 router = APIRouter(
@@ -257,3 +264,68 @@ async def get_course(
         "estado": c.estado if isinstance(c.estado, str) else c.estado.value,
         "docente_id": str(c.docente_id) if c.docente_id else None,
     }
+
+
+# ---------------------------------------------------------------------------
+# Endpoints internos s2s (X-Service-Key) — sincronización desde ms-integracion-lms
+# ---------------------------------------------------------------------------
+
+service_router = APIRouter(
+    prefix="/internal/courses",
+    tags=["Cursos — Interno"],
+    dependencies=[Depends(require_service_key)],
+)
+
+
+class CursoSyncItem(BaseModel):
+    """Curso proveniente de Moodle (vía ms-integracion-lms)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    moodle_course_id: str = Field(..., description="ID del curso en Moodle")
+    nombre: str = Field(..., max_length=255, description="Nombre del curso")
+    codigo: str = Field(default="", max_length=50, description="Código (opcional)")
+
+
+class CursosSyncRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cursos: list[CursoSyncItem]
+
+
+class CursosSyncResponse(BaseModel):
+    procesados: int = Field(..., description="Cursos recibidos")
+    creados: int = Field(..., description="Cursos nuevos insertados")
+    actualizados: int = Field(..., description="Cursos existentes actualizados")
+
+
+@service_router.post(
+    "/sync", status_code=status.HTTP_200_OK, response_model=CursosSyncResponse
+)
+async def sync_courses(
+    body: CursosSyncRequest,
+    repo: CursoPostgresAdapter = Depends(get_curso_repo),
+):
+    """Sincroniza el catálogo de cursos desde ms-integracion-lms (idempotente).
+
+    Hace upsert por ``moodle_course_id``. Si el curso no trae código, se genera
+    uno determinístico (``MOODLE-<id>``) para respetar la unicidad del catálogo.
+
+    **Auth:** X-Service-Key
+    """
+    creados = 0
+    actualizados = 0
+    for item in body.cursos:
+        if not item.moodle_course_id:
+            continue
+        curso = Curso(
+            nombre=item.nombre,
+            codigo=item.codigo or f"MOODLE-{item.moodle_course_id}",
+            moodle_course_id=item.moodle_course_id,
+        )
+        _, creado = await repo.upsert_by_moodle_id(curso)
+        creados += int(creado)
+        actualizados += int(not creado)
+    return CursosSyncResponse(
+        procesados=len(body.cursos), creados=creados, actualizados=actualizados
+    )
