@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from scalar_fastapi import get_scalar_api_reference
 from src.infrastructure.adapters.in_.cursos_router import router as cursos_router
 from src.infrastructure.adapters.in_.cursos_router import (
@@ -24,11 +25,22 @@ from src.infrastructure.db.models.cursos_models import Base
 logger = logging.getLogger(__name__)
 
 
+# Migración ligera: columnas agregadas después de la creación inicial de la
+# tabla. create_all() NO altera tablas existentes, así que se aplican con
+# ADD COLUMN IF NOT EXISTS (idempotente) en cada arranque.
+_MIGRACIONES = (
+    "ALTER TABLE resources ADD COLUMN IF NOT EXISTS moodle_resource_id "
+    "VARCHAR(100) NOT NULL DEFAULT ''",
+)
+
+
 async def _init_db() -> None:
     for intento in range(10):
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                for ddl in _MIGRACIONES:
+                    await conn.execute(text(ddl))
             logger.info("Base de datos lista.")
             return
         except Exception as exc:
