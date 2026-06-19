@@ -72,6 +72,41 @@ class RecursoPostgresAdapter(RecursoRepositoryPort):
         r = await self._s.execute(q)
         return [_to_entity(m) for m in r.scalars().all()]
 
+    async def upsert_by_moodle_id(
+        self, recurso: RecursoEducativo
+    ) -> tuple[RecursoEducativo, bool]:
+        """Inserta o actualiza un recurso identificándolo por moodle_resource_id.
+
+        Idempotente: el sync de actividades de Moodle puede correr muchas veces.
+        Devuelve (recurso, creado) donde ``creado`` es True si fue alta nueva.
+        """
+        r = await self._s.execute(
+            select(RecursoModel).where(
+                RecursoModel.moodle_resource_id == recurso.moodle_resource_id
+            )
+        )
+        m = r.scalar_one_or_none()
+        creado = m is None
+        if m:
+            m.titulo = recurso.titulo
+            m.tipo = recurso.tipo.value
+            m.curso_id = recurso.curso_id
+        else:
+            m = RecursoModel(
+                id=recurso.id,
+                curso_id=recurso.curso_id,
+                titulo=recurso.titulo,
+                tipo=recurso.tipo.value,
+                nivel_dificultad=recurso.nivel_dificultad.value,
+                url=recurso.url,
+                s3_key=recurso.s3_key,
+                activo=recurso.activo,
+                moodle_resource_id=recurso.moodle_resource_id,
+            )
+            self._s.add(m)
+        await self._s.flush()
+        return _to_entity(m), creado
+
 
 def _to_entity(m: RecursoModel) -> RecursoEducativo:
     return RecursoEducativo(
@@ -83,4 +118,5 @@ def _to_entity(m: RecursoModel) -> RecursoEducativo:
         url=m.url,
         s3_key=m.s3_key,
         activo=m.activo,
+        moodle_resource_id=m.moodle_resource_id,
     )

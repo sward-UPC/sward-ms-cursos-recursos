@@ -73,6 +73,13 @@ class CursoPostgresAdapter(CursoRepositoryPort):
         await self._s.flush()
         return _curso_to_entity(m), creado
 
+    async def find_by_moodle_course_id(self, moodle_course_id: str) -> Curso | None:
+        r = await self._s.execute(
+            select(CursoModel).where(CursoModel.moodle_course_id == moodle_course_id)
+        )
+        m = r.scalar_one_or_none()
+        return _curso_to_entity(m) if m else None
+
     async def save_actividad(self, actividad: Actividad) -> Actividad:
         m = ActividadModel(
             id=actividad.id,

@@ -9,6 +9,9 @@ from src.infrastructure.adapters.in_.cursos_router import router as cursos_route
 from src.infrastructure.adapters.in_.cursos_router import (
     service_router as cursos_service_router,
 )
+from src.infrastructure.adapters.in_.recursos_router import (
+    internal_router as recursos_internal_router,
+)
 from src.infrastructure.adapters.in_.recursos_router import router as recursos_router
 from src.infrastructure.adapters.in_.recursos_router import (
     service_router as recursos_service_router,
@@ -94,6 +97,7 @@ app.include_router(cursos_router)
 app.include_router(cursos_service_router)
 app.include_router(recursos_router)
 app.include_router(recursos_service_router)
+app.include_router(recursos_internal_router)
 
 
 @app.get("/scalar", include_in_schema=False)
