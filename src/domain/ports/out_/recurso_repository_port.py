@@ -30,3 +30,7 @@ class RecursoRepositoryPort(ABC):
     async def find_all(
         self, curso_id: UUID | None = None
     ) -> list[RecursoEducativo]: ...
+    @abstractmethod
+    async def upsert_by_moodle_id(
+        self, recurso: RecursoEducativo
+    ) -> tuple[RecursoEducativo, bool]: ...
