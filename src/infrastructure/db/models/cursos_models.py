@@ -51,6 +51,7 @@ class RecursoModel(Base):
     url: Mapped[str] = mapped_column(String(500), default="")
     s3_key: Mapped[str] = mapped_column(String(500), default="")
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
+    moodle_resource_id: Mapped[str] = mapped_column(String(100), default="", index=True)
 
 
 class MetadataRecursoModel(Base):
