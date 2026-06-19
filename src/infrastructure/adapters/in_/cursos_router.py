@@ -4,10 +4,12 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.application.use_cases.gestionar_curso import (
+    ActualizarCursoCommand,
+    CursoNoEncontradoError,
     GestionarCursoCommand,
     GestionarCursoUseCase,
 )
-from src.domain.entities.curso import Curso
+from src.domain.entities.curso import Curso, EstadoCurso
 from src.infrastructure.adapters.out_.curso_postgres_adapter import CursoPostgresAdapter
 from src.infrastructure.dependencies import (
     get_curso_repo,
@@ -252,6 +254,62 @@ async def get_course(
     """
     c = await uc.obtener(course_id)
     if not c:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Curso no encontrado"
+        )
+    return {
+        "id": str(c.id),
+        "nombre": c.nombre,
+        "codigo": c.codigo,
+        "descripcion": c.descripcion,
+        "moodle_course_id": c.moodle_course_id,
+        "estado": c.estado if isinstance(c.estado, str) else c.estado.value,
+        "docente_id": str(c.docente_id) if c.docente_id else None,
+    }
+
+
+class UpdateCourseRequest(BaseModel):
+    """Campos editables de un curso (los que el sync de Moodle no sobreescribe)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    descripcion: str | None = Field(
+        default=None, max_length=1000, description="Descripción del curso"
+    )
+    estado: EstadoCurso | None = Field(
+        default=None, description="Estado del curso (activo | inactivo)"
+    )
+
+
+@router.put(
+    "/{course_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=CursoDetailResponse,
+    responses={
+        200: {"description": "Curso actualizado exitosamente"},
+        401: {"description": "No autorizado. JWT inválido o expirado."},
+        404: {"description": "Curso no encontrado."},
+        422: {"description": "Validación de datos fallida."},
+    },
+)
+async def update_course(
+    course_id: UUID = Path(..., description="UUID del curso a editar"),
+    body: UpdateCourseRequest = Body(..., description="Campos a actualizar"),
+    uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc),
+):
+    """Actualiza la descripción y/o el estado de un curso.
+
+    `nombre` y `codigo` no se editan aquí: provienen de Moodle y los re-aplica el
+    sync en cada corrida.
+
+    **Auth:** JWT | **SLA:** <100ms
+    """
+    try:
+        c = await uc.actualizar(
+            course_id,
+            ActualizarCursoCommand(descripcion=body.descripcion, estado=body.estado),
+        )
+    except CursoNoEncontradoError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Curso no encontrado"
         )
