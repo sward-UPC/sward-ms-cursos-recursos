@@ -28,8 +28,10 @@ from src.domain.ports.out_.recurso_repository_port import (
 from src.infrastructure.adapters.in_.main import app
 from src.infrastructure.dependencies import (
     get_buscar_candidatos_uc,
+    get_curso_repo,
     get_gestionar_curso_uc,
     get_gestionar_recurso_uc,
+    get_recurso_repo,
     require_jwt,
 )
 
@@ -63,6 +65,12 @@ class FakeCursoRepo(CursoRepositoryPort):
                 return existente, False
         self.cursos[curso.id] = curso
         return curso, True
+
+    async def find_by_moodle_course_id(self, moodle_course_id: str) -> Curso | None:
+        for c in self.cursos.values():
+            if c.moodle_course_id == moodle_course_id:
+                return c
+        return None
 
     async def save_actividad(self, actividad: Actividad) -> Actividad:
         self.actividades.append(actividad)
@@ -103,6 +111,18 @@ class FakeRecursoRepo(RecursoRepositoryPort):
             items = [r for r in items if r.curso_id == curso_id]
         return items
 
+    async def upsert_by_moodle_id(
+        self, recurso: RecursoEducativo
+    ) -> tuple[RecursoEducativo, bool]:
+        for existente in self.recursos.values():
+            if existente.moodle_resource_id == recurso.moodle_resource_id:
+                existente.titulo = recurso.titulo
+                existente.tipo = recurso.tipo
+                existente.curso_id = recurso.curso_id
+                return existente, False
+        self.recursos[recurso.id] = recurso
+        return recurso, True
+
 
 class _StubStorage:
     async def upload(self, *args, **kwargs):  # noqa: ANN002, ANN003
@@ -136,6 +156,8 @@ async def client():
     app.dependency_overrides[get_buscar_candidatos_uc] = lambda: (
         BuscarRecursosCandidatosUseCase(recurso_repo)
     )
+    app.dependency_overrides[get_curso_repo] = lambda: curso_repo
+    app.dependency_overrides[get_recurso_repo] = lambda: recurso_repo
     # Sobreescribe la validación JWT por un payload fake (autenticación simulada).
     app.dependency_overrides[require_jwt] = lambda: FAKE_PAYLOAD
 

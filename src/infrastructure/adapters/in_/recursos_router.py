@@ -10,11 +10,18 @@ from src.application.use_cases.gestionar_recurso import (
     GestionarRecursoCommand,
     GestionarRecursoUseCase,
 )
+from src.domain.entities.recurso_educativo import RecursoEducativo
 from src.domain.ports.out_.recurso_repository_port import CriteriosBusqueda
 from src.domain.value_objects.tipo_recurso import NivelDificultad, TipoRecurso
+from src.infrastructure.adapters.out_.curso_postgres_adapter import CursoPostgresAdapter
+from src.infrastructure.adapters.out_.recurso_postgres_adapter import (
+    RecursoPostgresAdapter,
+)
 from src.infrastructure.dependencies import (
     get_buscar_candidatos_uc,
+    get_curso_repo,
     get_gestionar_recurso_uc,
+    get_recurso_repo,
     require_jwt,
     require_service_key,
 )
@@ -334,3 +341,110 @@ async def get_candidates(
         }
         for r in recursos
     ]
+
+
+# ---------------------------------------------------------------------------
+# Endpoints internos s2s (X-Service-Key) — sincronización desde ms-integracion-lms
+# ---------------------------------------------------------------------------
+
+internal_router = APIRouter(
+    prefix="/internal/resources",
+    tags=["Recursos — Interno"],
+    dependencies=[Depends(require_service_key)],
+)
+
+# Mapeo de tipos de módulo de Moodle al catálogo de tipos de recurso de SWARD.
+# Los tipos no contemplados caen en EJERCICIO (default razonable para actividad).
+_MOODLE_TIPO_A_RECURSO: dict[str, TipoRecurso] = {
+    "quiz": TipoRecurso.QUIZ,
+    "assign": TipoRecurso.EJERCICIO,
+    "workshop": TipoRecurso.EJERCICIO,
+    "resource": TipoRecurso.LECTURA,
+    "page": TipoRecurso.LECTURA,
+    "book": TipoRecurso.LECTURA,
+    "url": TipoRecurso.LECTURA,
+    "label": TipoRecurso.LECTURA,
+    "lesson": TipoRecurso.PRESENTACION,
+    "scorm": TipoRecurso.PRESENTACION,
+    "forum": TipoRecurso.EJERCICIO,
+}
+
+
+def _mapear_tipo_moodle(tipo: str) -> TipoRecurso:
+    return _MOODLE_TIPO_A_RECURSO.get((tipo or "").lower(), TipoRecurso.EJERCICIO)
+
+
+class RecursoSyncItem(BaseModel):
+    """Actividad de Moodle a propagar como recurso (vía ms-integracion-lms)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    moodle_activity_id: str = Field(..., description="ID de la actividad en Moodle")
+    moodle_course_id: str = Field(
+        ..., description="ID del curso en Moodle al que pertenece"
+    )
+    titulo: str = Field(..., max_length=255, description="Título de la actividad")
+    tipo: str = Field(
+        default="", description="Tipo de módulo de Moodle (quiz, assign…)"
+    )
+
+
+class RecursosSyncRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recursos: list[RecursoSyncItem]
+
+
+class RecursosSyncResponse(BaseModel):
+    procesados: int = Field(..., description="Recursos recibidos")
+    creados: int = Field(..., description="Recursos nuevos insertados")
+    actualizados: int = Field(..., description="Recursos existentes actualizados")
+    omitidos: int = Field(..., description="Recursos omitidos por curso inexistente")
+
+
+@internal_router.post(
+    "/sync", status_code=status.HTTP_200_OK, response_model=RecursosSyncResponse
+)
+async def sync_resources(
+    body: RecursosSyncRequest,
+    curso_repo: CursoPostgresAdapter = Depends(get_curso_repo),
+    recurso_repo: RecursoPostgresAdapter = Depends(get_recurso_repo),
+):
+    """Sincroniza actividades de Moodle como recursos desde ms-integracion-lms.
+
+    Hace upsert idempotente por ``moodle_activity_id``. Resuelve el ``curso_id``
+    interno buscando el curso por su ``moodle_course_id`` (el sync de cursos corre
+    antes). Si el curso aún no existe en el catálogo, omite ese recurso.
+
+    **Auth:** X-Service-Key
+    """
+    creados = 0
+    actualizados = 0
+    omitidos = 0
+    # Cache local para no re-consultar el mismo curso en cada actividad.
+    cursos_cache: dict[str, UUID | None] = {}
+    for item in body.recursos:
+        if not item.moodle_activity_id:
+            continue
+        if item.moodle_course_id not in cursos_cache:
+            curso = await curso_repo.find_by_moodle_course_id(item.moodle_course_id)
+            cursos_cache[item.moodle_course_id] = curso.id if curso else None
+        curso_id = cursos_cache[item.moodle_course_id]
+        if curso_id is None:
+            omitidos += 1
+            continue
+        recurso = RecursoEducativo(
+            curso_id=curso_id,
+            titulo=item.titulo,
+            tipo=_mapear_tipo_moodle(item.tipo),
+            moodle_resource_id=item.moodle_activity_id,
+        )
+        _, creado = await recurso_repo.upsert_by_moodle_id(recurso)
+        creados += int(creado)
+        actualizados += int(not creado)
+    return RecursosSyncResponse(
+        procesados=len(body.recursos),
+        creados=creados,
+        actualizados=actualizados,
+        omitidos=omitidos,
+    )
