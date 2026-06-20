@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 _MIGRACIONES = (
     "ALTER TABLE resources ADD COLUMN IF NOT EXISTS moodle_resource_id "
     "VARCHAR(100) NOT NULL DEFAULT ''",
+    "ALTER TABLE resources ADD COLUMN IF NOT EXISTS url "
+    "VARCHAR(500) NOT NULL DEFAULT ''",
+    "ALTER TABLE resources ADD COLUMN IF NOT EXISTS seccion "
+    "VARCHAR(255) NOT NULL DEFAULT ''",
 )
 
 
