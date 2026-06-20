@@ -161,6 +161,11 @@ class RecursoDetailResponse(BaseModel):
     url: str = Field(
         description="URL del recurso", example="https://example.com/tutorial-quicksort"
     )
+    seccion: str = Field(
+        default="",
+        description="Concepto/sección a la que pertenece el recurso",
+        example="ordenamiento",
+    )
 
 
 class CreateResourceResponse(BaseModel):
@@ -312,6 +317,10 @@ async def get_candidates(
         default=None,
         description="Nivel de dificultad para filtrar candidatos (opcional)",
     ),
+    seccion: str | None = Query(
+        default=None,
+        description="Sección/concepto para filtrar candidatos (opcional)",
+    ),
     limit: int = Query(
         default=10,
         ge=1,
@@ -328,7 +337,11 @@ async def get_candidates(
     """
     recursos = await uc.execute(
         CriteriosBusqueda(
-            curso_id=courseId, tipo=tipo, nivel_dificultad=nivel, limit=limit
+            curso_id=courseId,
+            tipo=tipo,
+            nivel_dificultad=nivel,
+            seccion=seccion,
+            limit=limit,
         )
     )
     return [
@@ -338,6 +351,7 @@ async def get_candidates(
             "tipo": r.tipo,
             "nivel_dificultad": r.nivel_dificultad,
             "url": r.url,
+            "seccion": r.seccion,
         }
         for r in recursos
     ]
@@ -386,6 +400,10 @@ class RecursoSyncItem(BaseModel):
     titulo: str = Field(..., max_length=255, description="Título de la actividad")
     tipo: str = Field(
         default="", description="Tipo de módulo de Moodle (quiz, assign…)"
+    )
+    url: str = Field(default="", description="Enlace a la actividad en Moodle")
+    seccion: str = Field(
+        default="", description="Concepto/sección de Moodle a la que pertenece"
     )
 
 
@@ -437,6 +455,8 @@ async def sync_resources(
             curso_id=curso_id,
             titulo=item.titulo,
             tipo=_mapear_tipo_moodle(item.tipo),
+            url=item.url,
+            seccion=item.seccion,
             moodle_resource_id=item.moodle_activity_id,
         )
         _, creado = await recurso_repo.upsert_by_moodle_id(recurso)

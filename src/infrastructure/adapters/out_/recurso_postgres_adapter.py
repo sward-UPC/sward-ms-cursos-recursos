@@ -28,6 +28,7 @@ class RecursoPostgresAdapter(RecursoRepositoryPort):
             tipo=recurso.tipo.value,
             nivel_dificultad=recurso.nivel_dificultad.value,
             url=recurso.url,
+            seccion=recurso.seccion,
             s3_key=recurso.s3_key,
             activo=recurso.activo,
         )
@@ -61,6 +62,8 @@ class RecursoPostgresAdapter(RecursoRepositoryPort):
             q = q.where(
                 RecursoModel.nivel_dificultad == criterios.nivel_dificultad.value
             )
+        if criterios.seccion:
+            q = q.where(RecursoModel.seccion == criterios.seccion)
         q = q.limit(criterios.limit)
         r = await self._s.execute(q)
         return [_to_entity(m) for m in r.scalars().all()]
@@ -91,6 +94,8 @@ class RecursoPostgresAdapter(RecursoRepositoryPort):
             m.titulo = recurso.titulo
             m.tipo = recurso.tipo.value
             m.curso_id = recurso.curso_id
+            m.url = recurso.url
+            m.seccion = recurso.seccion
         else:
             m = RecursoModel(
                 id=recurso.id,
@@ -99,6 +104,7 @@ class RecursoPostgresAdapter(RecursoRepositoryPort):
                 tipo=recurso.tipo.value,
                 nivel_dificultad=recurso.nivel_dificultad.value,
                 url=recurso.url,
+                seccion=recurso.seccion,
                 s3_key=recurso.s3_key,
                 activo=recurso.activo,
                 moodle_resource_id=recurso.moodle_resource_id,
@@ -116,6 +122,7 @@ def _to_entity(m: RecursoModel) -> RecursoEducativo:
         tipo=TipoRecurso(m.tipo),
         nivel_dificultad=NivelDificultad(m.nivel_dificultad),
         url=m.url,
+        seccion=m.seccion,
         s3_key=m.s3_key,
         activo=m.activo,
         moodle_resource_id=m.moodle_resource_id,
