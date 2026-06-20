@@ -11,6 +11,7 @@ class RecursoEducativo:
     tipo: TipoRecurso = TipoRecurso.LECTURA
     nivel_dificultad: NivelDificultad = NivelDificultad.INTERMEDIO
     url: str = ""
+    seccion: str = ""
     s3_key: str = ""
     activo: bool = True
     moodle_resource_id: str = ""

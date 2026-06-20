@@ -103,6 +103,8 @@ class FakeRecursoRepo(RecursoRepositoryPort):
             items = [
                 r for r in items if r.nivel_dificultad == criterios.nivel_dificultad
             ]
+        if criterios.seccion:
+            items = [r for r in items if r.seccion == criterios.seccion]
         return items[: criterios.limit]
 
     async def find_all(self, curso_id: UUID | None = None):
@@ -119,6 +121,8 @@ class FakeRecursoRepo(RecursoRepositoryPort):
                 existente.titulo = recurso.titulo
                 existente.tipo = recurso.tipo
                 existente.curso_id = recurso.curso_id
+                existente.url = recurso.url
+                existente.seccion = recurso.seccion
                 return existente, False
         self.recursos[recurso.id] = recurso
         return recurso, True

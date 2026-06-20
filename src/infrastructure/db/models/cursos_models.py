@@ -49,6 +49,7 @@ class RecursoModel(Base):
         String(50), default="intermedio", index=True
     )
     url: Mapped[str] = mapped_column(String(500), default="")
+    seccion: Mapped[str] = mapped_column(String(255), default="", index=True)
     s3_key: Mapped[str] = mapped_column(String(500), default="")
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     moodle_resource_id: Mapped[str] = mapped_column(String(100), default="", index=True)
