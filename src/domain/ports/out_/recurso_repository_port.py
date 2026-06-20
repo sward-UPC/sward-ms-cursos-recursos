@@ -12,6 +12,7 @@ class CriteriosBusqueda:
     tipo: TipoRecurso | None = None
     nivel_dificultad: NivelDificultad | None = None
     concepto_id: str | None = None
+    seccion: str | None = None
     limit: int = 10
 
 

@@ -124,6 +124,53 @@ async def test_candidates_filtra_por_tipo(client):
 
 
 @pytest.mark.asyncio
+async def test_sync_propaga_url_seccion_y_candidates_filtra_por_seccion(client):
+    await client.post(
+        COURSES_SYNC,
+        json={"cursos": [{"moodle_course_id": "10", "nombre": "Algoritmos"}]},
+    )
+    await client.post(
+        RESOURCES_SYNC,
+        json={
+            "recursos": [
+                {
+                    "moodle_activity_id": "10-act-1",
+                    "moodle_course_id": "10",
+                    "titulo": "Quiz de ordenamiento",
+                    "tipo": "quiz",
+                    "url": "https://moodle/mod/quiz/view.php?id=1",
+                    "seccion": "ordenamiento",
+                },
+                {
+                    "moodle_activity_id": "10-act-2",
+                    "moodle_course_id": "10",
+                    "titulo": "Lectura de grafos",
+                    "tipo": "page",
+                    "url": "https://moodle/mod/page/view.php?id=2",
+                    "seccion": "grafos",
+                },
+            ]
+        },
+    )
+
+    # candidates expone url y seccion.
+    todos = await client.get(CANDIDATES)
+    assert todos.status_code == 200
+    por_titulo = {c["titulo"]: c for c in todos.json()}
+    quiz = por_titulo["Quiz de ordenamiento"]
+    assert quiz["url"] == "https://moodle/mod/quiz/view.php?id=1"
+    assert quiz["seccion"] == "ordenamiento"
+
+    # El filtro por seccion restringe los candidatos a ese concepto.
+    filtrados = await client.get(CANDIDATES, params={"seccion": "grafos"})
+    assert filtrados.status_code == 200
+    candidatos = filtrados.json()
+    assert len(candidatos) == 1
+    assert candidatos[0]["titulo"] == "Lectura de grafos"
+    assert candidatos[0]["seccion"] == "grafos"
+
+
+@pytest.mark.asyncio
 async def test_get_course_inexistente_devuelve_404(client):
     resp = await client.get(f"{COURSES}/{uuid4()}")
     assert resp.status_code == 404
