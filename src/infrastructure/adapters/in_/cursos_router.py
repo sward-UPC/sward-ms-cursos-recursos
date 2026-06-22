@@ -42,24 +42,24 @@ class CreateCourseRequest(BaseModel):
     nombre: str = Field(
         max_length=255,
         description="Nombre del curso",
-        example="Algoritmos y Estructuras de Datos",
+        examples=["Algoritmos y Estructuras de Datos"],
     )
     codigo: str = Field(
         max_length=64,
         description="Código único del curso",
-        example="CS-2025-001",
+        examples=["CS-2025-001"],
     )
     descripcion: str = Field(
         default="",
         max_length=2000,
         description="Descripción detallada del curso",
-        example="Curso fundamental sobre algoritmos y estructuras de datos.",
+        examples=["Curso fundamental sobre algoritmos y estructuras de datos."],
     )
     moodle_course_id: str = Field(
         default="",
         max_length=64,
         description="ID del curso en Moodle (opcional)",
-        example="5",
+        examples=["5"],
     )
 
 
@@ -112,16 +112,16 @@ class CursoDetailResponse(BaseModel):
 
     id: str = Field(
         description="UUID único del curso",
-        example="550e8400-e29b-41d4-a716-446655440000",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
     nombre: str = Field(
-        description="Nombre del curso", example="Algoritmos y Estructuras de Datos"
+        description="Nombre del curso", examples=["Algoritmos y Estructuras de Datos"]
     )
-    codigo: str = Field(description="Código del curso", example="CS-2025-001")
+    codigo: str = Field(description="Código del curso", examples=["CS-2025-001"])
     descripcion: str = Field(description="Descripción del curso", default="")
     moodle_course_id: str = Field(description="ID del curso en Moodle", default="")
     estado: str = Field(
-        description="Estado del curso (activo, inactivo)", example="activo"
+        description="Estado del curso (activo, inactivo)", examples=["activo"]
     )
     docente_id: str | None = Field(
         description="UUID del docente responsable", default=None
