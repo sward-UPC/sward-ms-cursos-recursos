@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.domain.entities.metadata_recurso import MetadataRecurso
 from src.domain.entities.recurso_educativo import RecursoEducativo
-from src.domain.ports.out_.recurso_repository_port import (
+from src.application.ports.out_.recurso_repository_port import (
     CriteriosBusqueda,
     RecursoRepositoryPort,
 )

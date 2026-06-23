@@ -1,11 +1,11 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
 from scalar_fastapi import get_scalar_api_reference
+
 from src.application.use_cases.gestionar_curso import CursoNoEncontradoError
 from src.infrastructure.adapters.in_.cursos_router import router as cursos_router
 from src.infrastructure.adapters.in_.cursos_router import (
@@ -20,43 +20,14 @@ from src.infrastructure.adapters.in_.recursos_router import (
 )
 from src.infrastructure.config.settings import settings
 from src.infrastructure.db.database import engine
-from src.infrastructure.db.models.cursos_models import Base
-
 
 logger = logging.getLogger(__name__)
 
 
-# Migración ligera: columnas agregadas después de la creación inicial de la
-# tabla. create_all() NO altera tablas existentes, así que se aplican con
-# ADD COLUMN IF NOT EXISTS (idempotente) en cada arranque.
-_MIGRACIONES = (
-    "ALTER TABLE resources ADD COLUMN IF NOT EXISTS moodle_resource_id "
-    "VARCHAR(100) NOT NULL DEFAULT ''",
-    "ALTER TABLE resources ADD COLUMN IF NOT EXISTS url "
-    "VARCHAR(500) NOT NULL DEFAULT ''",
-    "ALTER TABLE resources ADD COLUMN IF NOT EXISTS seccion "
-    "VARCHAR(255) NOT NULL DEFAULT ''",
-)
-
-
-async def _init_db() -> None:
-    for intento in range(10):
-        try:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-                for ddl in _MIGRACIONES:
-                    await conn.execute(text(ddl))
-            logger.info("Base de datos lista.")
-            return
-        except Exception as exc:
-            logger.warning("BD no disponible (intento %d/10): %s", intento + 1, exc)
-            await asyncio.sleep(5)
-    logger.error("No se pudo conectar a la BD tras 10 intentos.")
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    asyncio.create_task(_init_db())
+    # El esquema lo gestiona Alembic (`alembic upgrade head` en el entrypoint del
+    # contenedor); aquí solo liberamos el engine al apagar.
     yield
     await engine.dispose()
 
