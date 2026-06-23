@@ -9,19 +9,16 @@ from src.application.use_cases.buscar_recursos_candidatos import (
 from src.application.use_cases.gestionar_recurso import (
     GestionarRecursoCommand,
     GestionarRecursoUseCase,
+    RecursoSyncItemCommand,
+    SincronizarRecursosCommand,
+    SincronizarRecursosUseCase,
 )
-from src.domain.entities.recurso_educativo import RecursoEducativo
 from src.domain.ports.out_.recurso_repository_port import CriteriosBusqueda
 from src.domain.value_objects.tipo_recurso import NivelDificultad, TipoRecurso
-from src.infrastructure.adapters.out_.curso_postgres_adapter import CursoPostgresAdapter
-from src.infrastructure.adapters.out_.recurso_postgres_adapter import (
-    RecursoPostgresAdapter,
-)
 from src.infrastructure.dependencies import (
     get_buscar_candidatos_uc,
-    get_curso_repo,
     get_gestionar_recurso_uc,
-    get_recurso_repo,
+    get_sincronizar_recursos_uc,
     require_jwt,
     require_service_key,
 )
@@ -374,26 +371,6 @@ internal_router = APIRouter(
     dependencies=[Depends(require_service_key)],
 )
 
-# Mapeo de tipos de módulo de Moodle al catálogo de tipos de recurso de SWARD.
-# Los tipos no contemplados caen en EJERCICIO (default razonable para actividad).
-_MOODLE_TIPO_A_RECURSO: dict[str, TipoRecurso] = {
-    "quiz": TipoRecurso.QUIZ,
-    "assign": TipoRecurso.EJERCICIO,
-    "workshop": TipoRecurso.EJERCICIO,
-    "resource": TipoRecurso.LECTURA,
-    "page": TipoRecurso.LECTURA,
-    "book": TipoRecurso.LECTURA,
-    "url": TipoRecurso.LECTURA,
-    "label": TipoRecurso.LECTURA,
-    "lesson": TipoRecurso.PRESENTACION,
-    "scorm": TipoRecurso.PRESENTACION,
-    "forum": TipoRecurso.EJERCICIO,
-}
-
-
-def _mapear_tipo_moodle(tipo: str) -> TipoRecurso:
-    return _MOODLE_TIPO_A_RECURSO.get((tipo or "").lower(), TipoRecurso.EJERCICIO)
-
 
 class RecursoSyncItem(BaseModel):
     """Actividad de Moodle a propagar como recurso (vía ms-integracion-lms)."""
@@ -432,8 +409,7 @@ class RecursosSyncResponse(BaseModel):
 )
 async def sync_resources(
     body: RecursosSyncRequest,
-    curso_repo: CursoPostgresAdapter = Depends(get_curso_repo),
-    recurso_repo: RecursoPostgresAdapter = Depends(get_recurso_repo),
+    uc: SincronizarRecursosUseCase = Depends(get_sincronizar_recursos_uc),
 ):
     """Sincroniza actividades de Moodle como recursos desde ms-integracion-lms.
 
@@ -443,35 +419,24 @@ async def sync_resources(
 
     **Auth:** X-Service-Key
     """
-    creados = 0
-    actualizados = 0
-    omitidos = 0
-    # Cache local para no re-consultar el mismo curso en cada actividad.
-    cursos_cache: dict[str, UUID | None] = {}
-    for item in body.recursos:
-        if not item.moodle_activity_id:
-            continue
-        if item.moodle_course_id not in cursos_cache:
-            curso = await curso_repo.find_by_moodle_course_id(item.moodle_course_id)
-            cursos_cache[item.moodle_course_id] = curso.id if curso else None
-        curso_id = cursos_cache[item.moodle_course_id]
-        if curso_id is None:
-            omitidos += 1
-            continue
-        recurso = RecursoEducativo(
-            curso_id=curso_id,
-            titulo=item.titulo,
-            tipo=_mapear_tipo_moodle(item.tipo),
-            url=item.url,
-            seccion=item.seccion,
-            moodle_resource_id=item.moodle_activity_id,
+    resultado = await uc.execute(
+        SincronizarRecursosCommand(
+            recursos=[
+                RecursoSyncItemCommand(
+                    moodle_activity_id=item.moodle_activity_id,
+                    moodle_course_id=item.moodle_course_id,
+                    titulo=item.titulo,
+                    tipo=item.tipo,
+                    url=item.url,
+                    seccion=item.seccion,
+                )
+                for item in body.recursos
+            ]
         )
-        _, creado = await recurso_repo.upsert_by_moodle_id(recurso)
-        creados += int(creado)
-        actualizados += int(not creado)
+    )
     return RecursosSyncResponse(
-        procesados=len(body.recursos),
-        creados=creados,
-        actualizados=actualizados,
-        omitidos=omitidos,
+        procesados=resultado.procesados,
+        creados=resultado.creados,
+        actualizados=resultado.actualizados,
+        omitidos=resultado.omitidos,
     )
