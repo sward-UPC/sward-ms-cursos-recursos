@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sward_shared.identidad import moodle_uuid
 from src.domain.entities.actividad import Actividad
 from src.domain.entities.curso import Curso, EstadoCurso
-from src.domain.ports.out_.curso_repository_port import CursoRepositoryPort
+from src.application.ports.out_.curso_repository_port import CursoRepositoryPort
 from src.infrastructure.db.models.cursos_models import (
     ActividadModel,
     CursoModel,
