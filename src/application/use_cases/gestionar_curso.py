@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 from src.domain.entities.curso import Curso, EstadoCurso
-from src.domain.ports.out_.curso_repository_port import CursoRepositoryPort
+from src.application.ports.out_.curso_repository_port import CursoRepositoryPort
 
 
 class CursoNoEncontradoError(Exception):

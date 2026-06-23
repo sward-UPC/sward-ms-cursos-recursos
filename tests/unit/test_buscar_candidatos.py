@@ -5,7 +5,7 @@ from src.application.use_cases.buscar_recursos_candidatos import (
     BuscarRecursosCandidatosUseCase,
 )
 from src.domain.entities.recurso_educativo import RecursoEducativo
-from src.domain.ports.out_.recurso_repository_port import CriteriosBusqueda
+from src.application.ports.out_.recurso_repository_port import CriteriosBusqueda
 from src.domain.value_objects.tipo_recurso import TipoRecurso
 
 

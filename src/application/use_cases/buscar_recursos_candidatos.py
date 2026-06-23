@@ -1,5 +1,5 @@
 from src.domain.entities.recurso_educativo import RecursoEducativo
-from src.domain.ports.out_.recurso_repository_port import (
+from src.application.ports.out_.recurso_repository_port import (
     CriteriosBusqueda,
     RecursoRepositoryPort,
 )
