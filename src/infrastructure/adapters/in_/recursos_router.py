@@ -9,19 +9,16 @@ from src.application.use_cases.buscar_recursos_candidatos import (
 from src.application.use_cases.gestionar_recurso import (
     GestionarRecursoCommand,
     GestionarRecursoUseCase,
+    RecursoSyncItemCommand,
+    SincronizarRecursosCommand,
+    SincronizarRecursosUseCase,
 )
-from src.domain.entities.recurso_educativo import RecursoEducativo
 from src.domain.ports.out_.recurso_repository_port import CriteriosBusqueda
 from src.domain.value_objects.tipo_recurso import NivelDificultad, TipoRecurso
-from src.infrastructure.adapters.out_.curso_postgres_adapter import CursoPostgresAdapter
-from src.infrastructure.adapters.out_.recurso_postgres_adapter import (
-    RecursoPostgresAdapter,
-)
 from src.infrastructure.dependencies import (
     get_buscar_candidatos_uc,
-    get_curso_repo,
     get_gestionar_recurso_uc,
-    get_recurso_repo,
+    get_sincronizar_recursos_uc,
     require_jwt,
     require_service_key,
 )
@@ -62,46 +59,46 @@ class CreateResourceRequest(BaseModel):
     titulo: str = Field(
         max_length=255,
         description="Título del recurso",
-        example="Tutorial: Quicksort",
+        examples=["Tutorial: Quicksort"],
     )
     tipo: TipoRecurso = Field(
-        description="Tipo de recurso (video, artículo, etc.)", example="video"
+        description="Tipo de recurso (video, artículo, etc.)", examples=["video"]
     )
     nivel_dificultad: NivelDificultad = Field(
         default=NivelDificultad.INTERMEDIO,
         description="Nivel de dificultad (básico, intermedio, avanzado)",
-        example="intermedio",
+        examples=["intermedio"],
     )
     url: str = Field(
         default="",
         max_length=2048,
         description="URL del recurso (opcional)",
-        example="https://example.com/tutorial-quicksort",
+        examples=["https://example.com/tutorial-quicksort"],
     )
     etiquetas: list[str] = Field(
         default_factory=list,
         max_length=50,
         description="Etiquetas para categorización",
-        example=["algoritmo", "ordenamiento"],
+        examples=[["algoritmo", "ordenamiento"]],
     )
     competencia: str = Field(
         default="",
         max_length=255,
         description="Competencia que desarrolla el recurso",
-        example="Implementar algoritmos de ordenamiento",
+        examples=["Implementar algoritmos de ordenamiento"],
     )
     tiempo_estimado_min: int = Field(
         default=0,
         ge=0,
         le=100000,
         description="Tiempo estimado de estudio en minutos",
-        example=30,
+        examples=[30],
     )
     concepto_ids: list[str] = Field(
         default_factory=list,
         max_length=200,
         description="IDs de conceptos asociados",
-        example=["sorting", "divide-and-conquer"],
+        examples=[["sorting", "divide-and-conquer"]],
     )
 
 
@@ -122,14 +119,16 @@ class RecursoResponse(BaseModel):
 
     id: str = Field(
         description="UUID único del recurso",
-        example="550e8400-e29b-41d4-a716-446655440001",
+        examples=["550e8400-e29b-41d4-a716-446655440001"],
     )
     titulo: str = Field(
-        description="Título del recurso", max_length=255, example="Tutorial: Quicksort"
+        description="Título del recurso",
+        max_length=255,
+        examples=["Tutorial: Quicksort"],
     )
-    tipo: str = Field(description="Tipo de recurso", example="video")
+    tipo: str = Field(description="Tipo de recurso", examples=["video"])
     nivel_dificultad: str = Field(
-        description="Nivel de dificultad", example="intermedio"
+        description="Nivel de dificultad", examples=["intermedio"]
     )
 
 
@@ -151,20 +150,23 @@ class RecursoDetailResponse(BaseModel):
 
     id: str = Field(
         description="UUID único del recurso",
-        example="550e8400-e29b-41d4-a716-446655440001",
+        examples=["550e8400-e29b-41d4-a716-446655440001"],
     )
-    titulo: str = Field(description="Título del recurso", example="Tutorial: Quicksort")
-    tipo: str = Field(description="Tipo de recurso", example="video")
+    titulo: str = Field(
+        description="Título del recurso", examples=["Tutorial: Quicksort"]
+    )
+    tipo: str = Field(description="Tipo de recurso", examples=["video"])
     nivel_dificultad: str = Field(
-        description="Nivel de dificultad", example="intermedio"
+        description="Nivel de dificultad", examples=["intermedio"]
     )
     url: str = Field(
-        description="URL del recurso", example="https://example.com/tutorial-quicksort"
+        description="URL del recurso",
+        examples=["https://example.com/tutorial-quicksort"],
     )
     seccion: str = Field(
         default="",
         description="Concepto/sección a la que pertenece el recurso",
-        example="ordenamiento",
+        examples=["ordenamiento"],
     )
 
 
@@ -184,10 +186,12 @@ class CreateResourceResponse(BaseModel):
 
     id: str = Field(
         description="UUID único del recurso creado",
-        example="550e8400-e29b-41d4-a716-446655440001",
+        examples=["550e8400-e29b-41d4-a716-446655440001"],
     )
-    titulo: str = Field(description="Título del recurso", example="Tutorial: Quicksort")
-    tipo: str = Field(description="Tipo de recurso", example="video")
+    titulo: str = Field(
+        description="Título del recurso", examples=["Tutorial: Quicksort"]
+    )
+    tipo: str = Field(description="Tipo de recurso", examples=["video"])
 
 
 @router.post(
@@ -367,26 +371,6 @@ internal_router = APIRouter(
     dependencies=[Depends(require_service_key)],
 )
 
-# Mapeo de tipos de módulo de Moodle al catálogo de tipos de recurso de SWARD.
-# Los tipos no contemplados caen en EJERCICIO (default razonable para actividad).
-_MOODLE_TIPO_A_RECURSO: dict[str, TipoRecurso] = {
-    "quiz": TipoRecurso.QUIZ,
-    "assign": TipoRecurso.EJERCICIO,
-    "workshop": TipoRecurso.EJERCICIO,
-    "resource": TipoRecurso.LECTURA,
-    "page": TipoRecurso.LECTURA,
-    "book": TipoRecurso.LECTURA,
-    "url": TipoRecurso.LECTURA,
-    "label": TipoRecurso.LECTURA,
-    "lesson": TipoRecurso.PRESENTACION,
-    "scorm": TipoRecurso.PRESENTACION,
-    "forum": TipoRecurso.EJERCICIO,
-}
-
-
-def _mapear_tipo_moodle(tipo: str) -> TipoRecurso:
-    return _MOODLE_TIPO_A_RECURSO.get((tipo or "").lower(), TipoRecurso.EJERCICIO)
-
 
 class RecursoSyncItem(BaseModel):
     """Actividad de Moodle a propagar como recurso (vía ms-integracion-lms)."""
@@ -425,8 +409,7 @@ class RecursosSyncResponse(BaseModel):
 )
 async def sync_resources(
     body: RecursosSyncRequest,
-    curso_repo: CursoPostgresAdapter = Depends(get_curso_repo),
-    recurso_repo: RecursoPostgresAdapter = Depends(get_recurso_repo),
+    uc: SincronizarRecursosUseCase = Depends(get_sincronizar_recursos_uc),
 ):
     """Sincroniza actividades de Moodle como recursos desde ms-integracion-lms.
 
@@ -436,35 +419,24 @@ async def sync_resources(
 
     **Auth:** X-Service-Key
     """
-    creados = 0
-    actualizados = 0
-    omitidos = 0
-    # Cache local para no re-consultar el mismo curso en cada actividad.
-    cursos_cache: dict[str, UUID | None] = {}
-    for item in body.recursos:
-        if not item.moodle_activity_id:
-            continue
-        if item.moodle_course_id not in cursos_cache:
-            curso = await curso_repo.find_by_moodle_course_id(item.moodle_course_id)
-            cursos_cache[item.moodle_course_id] = curso.id if curso else None
-        curso_id = cursos_cache[item.moodle_course_id]
-        if curso_id is None:
-            omitidos += 1
-            continue
-        recurso = RecursoEducativo(
-            curso_id=curso_id,
-            titulo=item.titulo,
-            tipo=_mapear_tipo_moodle(item.tipo),
-            url=item.url,
-            seccion=item.seccion,
-            moodle_resource_id=item.moodle_activity_id,
+    resultado = await uc.execute(
+        SincronizarRecursosCommand(
+            recursos=[
+                RecursoSyncItemCommand(
+                    moodle_activity_id=item.moodle_activity_id,
+                    moodle_course_id=item.moodle_course_id,
+                    titulo=item.titulo,
+                    tipo=item.tipo,
+                    url=item.url,
+                    seccion=item.seccion,
+                )
+                for item in body.recursos
+            ]
         )
-        _, creado = await recurso_repo.upsert_by_moodle_id(recurso)
-        creados += int(creado)
-        actualizados += int(not creado)
+    )
     return RecursosSyncResponse(
-        procesados=len(body.recursos),
-        creados=creados,
-        actualizados=actualizados,
-        omitidos=omitidos,
+        procesados=resultado.procesados,
+        creados=resultado.creados,
+        actualizados=resultado.actualizados,
+        omitidos=resultado.omitidos,
     )
