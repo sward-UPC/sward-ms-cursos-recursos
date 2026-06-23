@@ -8,7 +8,10 @@ from src.application.use_cases.buscar_recursos_candidatos import (
     BuscarRecursosCandidatosUseCase,
 )
 from src.application.use_cases.gestionar_curso import GestionarCursoUseCase
-from src.application.use_cases.gestionar_recurso import GestionarRecursoUseCase
+from src.application.use_cases.gestionar_recurso import (
+    GestionarRecursoUseCase,
+    SincronizarRecursosUseCase,
+)
 from src.infrastructure.adapters.out_.curso_postgres_adapter import CursoPostgresAdapter
 from src.infrastructure.adapters.out_.eventbridge_adapter import EventBridgeAdapter
 from src.infrastructure.adapters.out_.recurso_postgres_adapter import (
@@ -41,12 +44,6 @@ def get_gestionar_curso_uc(
     return GestionarCursoUseCase(CursoPostgresAdapter(session))
 
 
-def get_curso_repo(
-    session: AsyncSession = Depends(get_session),
-) -> CursoPostgresAdapter:
-    return CursoPostgresAdapter(session)
-
-
 def get_gestionar_recurso_uc(
     session: AsyncSession = Depends(get_session),
     s3: S3Adapter = Depends(get_s3_adapter),
@@ -61,7 +58,9 @@ def get_buscar_candidatos_uc(
     return BuscarRecursosCandidatosUseCase(RecursoPostgresAdapter(session))
 
 
-def get_recurso_repo(
+def get_sincronizar_recursos_uc(
     session: AsyncSession = Depends(get_session),
-) -> RecursoPostgresAdapter:
-    return RecursoPostgresAdapter(session)
+) -> SincronizarRecursosUseCase:
+    return SincronizarRecursosUseCase(
+        RecursoPostgresAdapter(session), CursoPostgresAdapter(session)
+    )
