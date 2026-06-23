@@ -125,7 +125,9 @@ class RecursoResponse(BaseModel):
         examples=["550e8400-e29b-41d4-a716-446655440001"],
     )
     titulo: str = Field(
-        description="Título del recurso", max_length=255, examples=["Tutorial: Quicksort"]
+        description="Título del recurso",
+        max_length=255,
+        examples=["Tutorial: Quicksort"],
     )
     tipo: str = Field(description="Tipo de recurso", examples=["video"])
     nivel_dificultad: str = Field(
@@ -153,13 +155,16 @@ class RecursoDetailResponse(BaseModel):
         description="UUID único del recurso",
         examples=["550e8400-e29b-41d4-a716-446655440001"],
     )
-    titulo: str = Field(description="Título del recurso", examples=["Tutorial: Quicksort"])
+    titulo: str = Field(
+        description="Título del recurso", examples=["Tutorial: Quicksort"]
+    )
     tipo: str = Field(description="Tipo de recurso", examples=["video"])
     nivel_dificultad: str = Field(
         description="Nivel de dificultad", examples=["intermedio"]
     )
     url: str = Field(
-        description="URL del recurso", examples=["https://example.com/tutorial-quicksort"]
+        description="URL del recurso",
+        examples=["https://example.com/tutorial-quicksort"],
     )
     seccion: str = Field(
         default="",
@@ -186,7 +191,9 @@ class CreateResourceResponse(BaseModel):
         description="UUID único del recurso creado",
         examples=["550e8400-e29b-41d4-a716-446655440001"],
     )
-    titulo: str = Field(description="Título del recurso", examples=["Tutorial: Quicksort"])
+    titulo: str = Field(
+        description="Título del recurso", examples=["Tutorial: Quicksort"]
+    )
     tipo: str = Field(description="Tipo de recurso", examples=["video"])
 
 
