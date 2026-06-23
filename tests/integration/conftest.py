@@ -15,7 +15,10 @@ from src.application.use_cases.buscar_recursos_candidatos import (
     BuscarRecursosCandidatosUseCase,
 )
 from src.application.use_cases.gestionar_curso import GestionarCursoUseCase
-from src.application.use_cases.gestionar_recurso import GestionarRecursoUseCase
+from src.application.use_cases.gestionar_recurso import (
+    GestionarRecursoUseCase,
+    SincronizarRecursosUseCase,
+)
 from src.domain.entities.actividad import Actividad
 from src.domain.entities.curso import Curso
 from src.domain.entities.metadata_recurso import MetadataRecurso
@@ -28,10 +31,9 @@ from src.domain.ports.out_.recurso_repository_port import (
 from src.infrastructure.adapters.in_.main import app
 from src.infrastructure.dependencies import (
     get_buscar_candidatos_uc,
-    get_curso_repo,
     get_gestionar_curso_uc,
     get_gestionar_recurso_uc,
-    get_recurso_repo,
+    get_sincronizar_recursos_uc,
     require_jwt,
 )
 
@@ -160,8 +162,9 @@ async def client():
     app.dependency_overrides[get_buscar_candidatos_uc] = lambda: (
         BuscarRecursosCandidatosUseCase(recurso_repo)
     )
-    app.dependency_overrides[get_curso_repo] = lambda: curso_repo
-    app.dependency_overrides[get_recurso_repo] = lambda: recurso_repo
+    app.dependency_overrides[get_sincronizar_recursos_uc] = lambda: (
+        SincronizarRecursosUseCase(recurso_repo, curso_repo)
+    )
     # Sobreescribe la validación JWT por un payload fake (autenticación simulada).
     app.dependency_overrides[require_jwt] = lambda: FAKE_PAYLOAD
 
