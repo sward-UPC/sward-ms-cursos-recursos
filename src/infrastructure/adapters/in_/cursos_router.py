@@ -1,18 +1,17 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Body, Depends, Path, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.application.use_cases.gestionar_curso import (
     ActualizarCursoCommand,
-    CursoNoEncontradoError,
+    CursoSyncItemCommand,
     GestionarCursoCommand,
     GestionarCursoUseCase,
+    SincronizarCursosCommand,
 )
-from src.domain.entities.curso import Curso, EstadoCurso
-from src.infrastructure.adapters.out_.curso_postgres_adapter import CursoPostgresAdapter
+from src.domain.entities.curso import EstadoCurso
 from src.infrastructure.dependencies import (
-    get_curso_repo,
     get_gestionar_curso_uc,
     require_jwt,
     require_service_key,
@@ -253,10 +252,6 @@ async def get_course(
     **SLA:** <50ms | **Auth:** JWT | **Rate Limit:** 120 req/min
     """
     c = await uc.obtener(course_id)
-    if not c:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Curso no encontrado"
-        )
     return {
         "id": str(c.id),
         "nombre": c.nombre,
@@ -304,15 +299,10 @@ async def update_course(
 
     **Auth:** JWT | **SLA:** <100ms
     """
-    try:
-        c = await uc.actualizar(
-            course_id,
-            ActualizarCursoCommand(descripcion=body.descripcion, estado=body.estado),
-        )
-    except CursoNoEncontradoError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Curso no encontrado"
-        )
+    c = await uc.actualizar(
+        course_id,
+        ActualizarCursoCommand(descripcion=body.descripcion, estado=body.estado),
+    )
     return {
         "id": str(c.id),
         "nombre": c.nombre,
@@ -362,7 +352,7 @@ class CursosSyncResponse(BaseModel):
 )
 async def sync_courses(
     body: CursosSyncRequest,
-    repo: CursoPostgresAdapter = Depends(get_curso_repo),
+    uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc),
 ):
     """Sincroniza el catálogo de cursos desde ms-integracion-lms (idempotente).
 
@@ -371,19 +361,20 @@ async def sync_courses(
 
     **Auth:** X-Service-Key
     """
-    creados = 0
-    actualizados = 0
-    for item in body.cursos:
-        if not item.moodle_course_id:
-            continue
-        curso = Curso(
-            nombre=item.nombre,
-            codigo=item.codigo or f"MOODLE-{item.moodle_course_id}",
-            moodle_course_id=item.moodle_course_id,
+    resultado = await uc.sincronizar(
+        SincronizarCursosCommand(
+            cursos=[
+                CursoSyncItemCommand(
+                    moodle_course_id=item.moodle_course_id,
+                    nombre=item.nombre,
+                    codigo=item.codigo,
+                )
+                for item in body.cursos
+            ]
         )
-        _, creado = await repo.upsert_by_moodle_id(curso)
-        creados += int(creado)
-        actualizados += int(not creado)
+    )
     return CursosSyncResponse(
-        procesados=len(body.cursos), creados=creados, actualizados=actualizados
+        procesados=resultado.procesados,
+        creados=resultado.creados,
+        actualizados=resultado.actualizados,
     )

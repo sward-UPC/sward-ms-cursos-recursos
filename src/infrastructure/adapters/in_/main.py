@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from scalar_fastapi import get_scalar_api_reference
+from src.application.use_cases.gestionar_curso import CursoNoEncontradoError
 from src.infrastructure.adapters.in_.cursos_router import router as cursos_router
 from src.infrastructure.adapters.in_.cursos_router import (
     service_router as cursos_service_router,
@@ -98,6 +99,15 @@ async def security_headers(request: Request, call_next):
             "max-age=31536000; includeSubDomains"
         )
     return response
+
+
+@app.exception_handler(CursoNoEncontradoError)
+async def curso_no_encontrado_handler(request: Request, exc: CursoNoEncontradoError):
+    """Traduce el error de dominio ``CursoNoEncontradoError`` a un 404 HTTP."""
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "Curso no encontrado"},
+    )
 
 
 @app.exception_handler(Exception)
