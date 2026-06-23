@@ -1,4 +1,4 @@
-from src.domain.ports.out_.storage_port import StoragePort
+from src.application.ports.out_.storage_port import StoragePort
 from src.infrastructure.config.settings import settings
 
 

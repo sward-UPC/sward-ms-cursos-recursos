@@ -23,8 +23,8 @@ from src.domain.entities.actividad import Actividad
 from src.domain.entities.curso import Curso
 from src.domain.entities.metadata_recurso import MetadataRecurso
 from src.domain.entities.recurso_educativo import RecursoEducativo
-from src.domain.ports.out_.curso_repository_port import CursoRepositoryPort
-from src.domain.ports.out_.recurso_repository_port import (
+from src.application.ports.out_.curso_repository_port import CursoRepositoryPort
+from src.application.ports.out_.recurso_repository_port import (
     CriteriosBusqueda,
     RecursoRepositoryPort,
 )

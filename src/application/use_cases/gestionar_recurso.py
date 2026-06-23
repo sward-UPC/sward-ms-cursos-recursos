@@ -3,10 +3,10 @@ from uuid import UUID
 from src.domain.entities.metadata_recurso import MetadataRecurso
 from src.domain.entities.recurso_educativo import RecursoEducativo
 from src.domain.events.recurso_actualizado_event import RecursoActualizadoEvent
-from src.domain.ports.out_.curso_repository_port import CursoRepositoryPort
-from src.domain.ports.out_.event_publisher_port import EventPublisherPort
-from src.domain.ports.out_.recurso_repository_port import RecursoRepositoryPort
-from src.domain.ports.out_.storage_port import StoragePort
+from src.application.ports.out_.curso_repository_port import CursoRepositoryPort
+from src.application.ports.out_.event_publisher_port import EventPublisherPort
+from src.application.ports.out_.recurso_repository_port import RecursoRepositoryPort
+from src.application.ports.out_.storage_port import StoragePort
 from src.domain.value_objects.tipo_recurso import NivelDificultad, TipoRecurso
 
 # Mapeo de tipos de módulo de Moodle al catálogo de tipos de recurso de SWARD.
