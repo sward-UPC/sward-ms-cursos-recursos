@@ -19,6 +19,9 @@ _MOODLE_TIPO_A_RECURSO: dict[str, TipoRecurso] = {
     "page": TipoRecurso.LECTURA,
     "book": TipoRecurso.LECTURA,
     "url": TipoRecurso.LECTURA,
+    # ms-integracion-lms envía «video» cuando un enlace de Moodle apunta a YouTube o
+    # Vimeo (Moodle los guarda como url); sin esto caían en EJERCICIO.
+    "video": TipoRecurso.VIDEO,
     "label": TipoRecurso.LECTURA,
     "lesson": TipoRecurso.PRESENTACION,
     "scorm": TipoRecurso.PRESENTACION,

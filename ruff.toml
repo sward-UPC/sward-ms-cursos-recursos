@@ -1,0 +1,7 @@
+# Fijado el 22/09/2026, como en los demás microservicios (20/09). Sin esto, ruff
+# aplica su conjunto de reglas por defecto, que se amplió en versiones posteriores
+# y hace fallar el CI sobre código que ya estaba en main.
+line-length = 88
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
