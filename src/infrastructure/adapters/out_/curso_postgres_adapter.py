@@ -29,6 +29,9 @@ class CursoPostgresAdapter(CursoRepositoryPort):
             m.codigo = curso.codigo
             m.descripcion = curso.descripcion
             m.estado = curso.estado.value
+            # Sin esta línea, asignar el docente devolvía 200 y no guardaba nada:
+            # el alta lo escribía y la actualización lo dejaba fuera.
+            m.docente_id = curso.docente_id
         else:
             m = CursoModel(
                 id=curso.id,
