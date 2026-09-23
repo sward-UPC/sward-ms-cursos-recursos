@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sward_shared.auth import build_require_jwt, build_require_service_key
 
@@ -26,6 +26,22 @@ require_jwt = build_require_jwt(settings.secret_key, algorithm=settings.jwt_algo
 
 # Validación entrante de service-key (modo dev permite sin claves configuradas).
 require_service_key = build_require_service_key(settings.authorized_service_keys_set)
+
+
+def require_admin(usuario: dict = Depends(require_jwt)) -> dict:
+    """Exige rol de administrador, no solo una sesión válida.
+
+    Los demás endpoints de /courses se conforman con un JWT porque solo leen o
+    editan la descripción. Asignar el docente de un curso decide quién ve a esos
+    estudiantes y quién recibe sus alertas de riesgo, así que no puede quedar al
+    alcance de cualquier sesión.
+    """
+    if usuario.get("rol") != "administrador":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo un administrador puede asignar el docente de un curso.",
+        )
+    return usuario
 
 
 @lru_cache(maxsize=1)
