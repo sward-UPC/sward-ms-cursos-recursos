@@ -45,7 +45,9 @@ async def test_asigna_el_docente(use_case):
 async def test_none_lo_deja_sin_docente(use_case):
     repo, uc = use_case
     curso = await GestionarCursoUseCase(repo).crear(
-        GestionarCursoCommand(nombre="Estadística", codigo="SWARD-EST", docente_id=uuid4())
+        GestionarCursoCommand(
+            nombre="Estadística", codigo="SWARD-EST", docente_id=uuid4()
+        )
     )
     repo.find_by_id.return_value = curso
 
