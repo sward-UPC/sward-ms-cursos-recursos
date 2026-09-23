@@ -1,5 +1,7 @@
 """Contratos HTTP (Request/Response) del concern de cursos."""
 
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.domain.entities.curso import EstadoCurso
@@ -119,6 +121,16 @@ class UpdateCourseRequest(BaseModel):
     )
     estado: EstadoCurso | None = Field(
         default=None, description="Estado del curso (activo | inactivo)"
+    )
+
+
+class AsignarDocenteRequest(BaseModel):
+    """Docente a cargo de un curso. ``null`` lo deja sin asignar."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    docente_id: UUID | None = Field(
+        default=None, description="UUID del docente en ms-usuarios, o null"
     )
 
 

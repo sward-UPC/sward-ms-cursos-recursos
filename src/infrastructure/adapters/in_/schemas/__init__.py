@@ -6,6 +6,7 @@ importen desde `...adapters.in_.schemas` sin conocer el submódulo.
 """
 
 from .cursos import (
+    AsignarDocenteRequest,
     CreateCourseRequest,
     CursoDetailResponse,
     CursoResponse,
@@ -28,6 +29,7 @@ __all__ = [
     "CreateCourseRequest",
     "CursoResponse",
     "CursoDetailResponse",
+    "AsignarDocenteRequest",
     "UpdateCourseRequest",
     "CursoSyncItem",
     "CursosSyncRequest",
