@@ -79,6 +79,19 @@ class GestionarCursoUseCase:
             curso.estado = cmd.estado
         return await self._repo.save(curso)
 
+    async def asignar_docente(self, id: UUID, docente_id: UUID | None) -> Curso:
+        """Pone (o quita, con ``None``) el docente a cargo del curso.
+
+        De este dato dependen dos cosas: qué cursos ve el docente en su panel
+        —sin esto ve el catálogo entero, incluidos los que no dicta— y a quién
+        se le avisa cuando un estudiante entra en riesgo.
+        """
+        curso = await self._repo.find_by_id(id)
+        if curso is None:
+            raise CursoNoEncontradoError(str(id))
+        curso.docente_id = docente_id
+        return await self._repo.save(curso)
+
     async def sincronizar(
         self, cmd: SincronizarCursosCommand
     ) -> SincronizarCursosResultado:

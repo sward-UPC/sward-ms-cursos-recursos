@@ -10,6 +10,7 @@ from src.application.use_cases.gestionar_curso import (
     SincronizarCursosCommand,
 )
 from src.infrastructure.adapters.in_.schemas import (
+    AsignarDocenteRequest,
     CreateCourseRequest,
     CursoDetailResponse,
     CursoResponse,
@@ -19,6 +20,7 @@ from src.infrastructure.adapters.in_.schemas import (
 )
 from src.infrastructure.dependencies import (
     get_gestionar_curso_uc,
+    require_admin,
     require_jwt,
     require_service_key,
 )
@@ -192,6 +194,45 @@ async def update_course(
         course_id,
         ActualizarCursoCommand(descripcion=body.descripcion, estado=body.estado),
     )
+    return {
+        "id": str(c.id),
+        "nombre": c.nombre,
+        "codigo": c.codigo,
+        "descripcion": c.descripcion,
+        "moodle_course_id": c.moodle_course_id,
+        "estado": c.estado if isinstance(c.estado, str) else c.estado.value,
+        "docente_id": str(c.docente_id) if c.docente_id else None,
+    }
+
+
+@router.put(
+    "/{course_id}/docente",
+    status_code=status.HTTP_200_OK,
+    response_model=CursoDetailResponse,
+    responses={
+        200: {"description": "Docente asignado."},
+        401: {"description": "No autorizado. JWT inválido o expirado."},
+        403: {"description": "Solo un administrador puede asignarlo."},
+        404: {"description": "Curso no encontrado."},
+        422: {"description": "Validación de datos fallida."},
+    },
+)
+async def assign_teacher(
+    course_id: UUID = Path(..., description="UUID del curso"),
+    body: AsignarDocenteRequest = Body(..., description="Docente a cargo, o null"),
+    uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc),
+    _: dict = Depends(require_admin),
+):
+    """Asigna (o quita) el docente a cargo del curso.
+
+    De este dato dependen dos cosas que el docente nota enseguida: el panel le
+    muestra solo los cursos que dicta —sin asignación vería el catálogo entero,
+    con estudiantes que no son suyos— y las alertas de estudiante en riesgo
+    llegan a quien corresponde.
+
+    **Auth:** JWT de administrador | **SLA:** <100ms
+    """
+    c = await uc.asignar_docente(course_id, body.docente_id)
     return {
         "id": str(c.id),
         "nombre": c.nombre,
