@@ -2,8 +2,8 @@
 
 De este dato dependen dos cosas visibles: el panel del docente lista solo sus
 cursos, y las alertas de estudiante en riesgo van a quien dicta el curso. Por eso
-asignarlo exige rol de administrador, mientras que el resto de /courses se
-conforma con una sesión válida.
+asignarlo exige rol de administrador, igual que crear o editar un curso; leer el
+catálogo se conforma con una sesión válida.
 """
 
 from unittest.mock import AsyncMock

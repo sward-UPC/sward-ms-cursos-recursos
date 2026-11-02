@@ -25,7 +25,8 @@ from src.infrastructure.dependencies import (
     require_service_key,
 )
 
-# Todos los endpoints de /courses exigen un JWT de acceso válido.
+# Todos los endpoints de /courses exigen un JWT de acceso válido; para leer basta
+# con eso. Crear, editar y asignar el docente exigen además rol de administrador.
 router = APIRouter(
     prefix="/courses", tags=["Cursos"], dependencies=[Depends(require_jwt)]
 )
@@ -50,6 +51,7 @@ router = APIRouter(
         },
         400: {"description": "Solicitud inválida. Parámetros incorrectos."},
         401: {"description": "No autorizado. JWT inválido o expirado."},
+        403: {"description": "Solo un administrador puede crear cursos."},
         409: {"description": "Conflicto. Código de curso ya existe."},
         422: {"description": "Entidad no procesable. Validación de datos fallida."},
         500: {"description": "Error interno del servidor."},
@@ -58,12 +60,13 @@ router = APIRouter(
 async def create_course(
     body: CreateCourseRequest = Body(..., description="Datos del curso a crear"),
     uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc),
+    _: dict = Depends(require_admin),
 ):
     """Crea un nuevo curso en el sistema.
 
-    **Flujo:** 1. Valida JWT 2. Valida unicidad del código 3. Crea curso en base de datos 4. Retorna confirmación
+    **Flujo:** 1. Valida JWT de administrador 2. Valida unicidad del código 3. Crea curso en base de datos 4. Retorna confirmación
 
-    **SLA:** <100ms | **Auth:** JWT | **Rate Limit:** 60 req/min
+    **SLA:** <100ms | **Auth:** JWT de administrador | **Rate Limit:** 60 req/min
     """
     c = await uc.crear(GestionarCursoCommand(**body.model_dump()))
     return {
@@ -174,6 +177,7 @@ async def get_course(
     responses={
         200: {"description": "Curso actualizado exitosamente"},
         401: {"description": "No autorizado. JWT inválido o expirado."},
+        403: {"description": "Solo un administrador puede editarlo."},
         404: {"description": "Curso no encontrado."},
         422: {"description": "Validación de datos fallida."},
     },
@@ -182,13 +186,14 @@ async def update_course(
     course_id: UUID = Path(..., description="UUID del curso a editar"),
     body: UpdateCourseRequest = Body(..., description="Campos a actualizar"),
     uc: GestionarCursoUseCase = Depends(get_gestionar_curso_uc),
+    _: dict = Depends(require_admin),
 ):
     """Actualiza la descripción y/o el estado de un curso.
 
     `nombre` y `codigo` no se editan aquí: provienen de Moodle y los re-aplica el
-    sync en cada corrida.
+    sync en cada corrida. Lo usa el panel del administrador.
 
-    **Auth:** JWT | **SLA:** <100ms
+    **Auth:** JWT de administrador | **SLA:** <100ms
     """
     c = await uc.actualizar(
         course_id,
