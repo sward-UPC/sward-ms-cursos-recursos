@@ -37,9 +37,11 @@ from src.infrastructure.dependencies import (
     require_jwt,
 )
 
+# Administrador porque estos flujos crean y editan cursos, que es solo suyo; el
+# 403 para estudiante y docente lo cubre tests/unit/test_cursos_solo_admin.py.
 FAKE_PAYLOAD = {
     "sub": "00000000-0000-0000-0000-000000000001",
-    "rol": "docente",
+    "rol": "administrador",
     "permisos": ["leer", "escribir"],
     "type": "access",
 }

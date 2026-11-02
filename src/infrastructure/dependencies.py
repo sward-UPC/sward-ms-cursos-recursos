@@ -31,15 +31,16 @@ require_service_key = build_require_service_key(settings.authorized_service_keys
 def require_admin(usuario: dict = Depends(require_jwt)) -> dict:
     """Exige rol de administrador, no solo una sesión válida.
 
-    Los demás endpoints de /courses se conforman con un JWT porque solo leen o
-    editan la descripción. Asignar el docente de un curso decide quién ve a esos
-    estudiantes y quién recibe sus alertas de riesgo, así que no puede quedar al
-    alcance de cualquier sesión.
+    En /courses, leer queda abierto a cualquier sesión: los paneles del
+    estudiante y del docente listan el catálogo. Todo lo que lo cambia es del
+    administrador: crear un curso, editar su descripción o su estado y asignar
+    el docente, que decide quién ve a esos estudiantes y quién recibe sus
+    alertas de riesgo.
     """
     if usuario.get("rol") != "administrador":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo un administrador puede asignar el docente de un curso.",
+            detail="Solo un administrador puede crear o modificar un curso.",
         )
     return usuario
 
